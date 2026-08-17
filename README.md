@@ -94,10 +94,11 @@ sequential calls:
 
 ```python
 workspace = flash_kda.allocate_workspace(q, cu_seqlens)
+out = torch.empty_like(q)
 out = flash_kda.fwd(
     q, k, v, g, beta, scale,
     A_log=A_log, dt_bias=dt_bias, lower_bound=lower_bound,
-    cu_seqlens=cu_seqlens, workspace=workspace,
+    out=out, cu_seqlens=cu_seqlens, workspace=workspace,
 )
 ```
 
