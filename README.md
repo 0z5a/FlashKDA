@@ -67,6 +67,18 @@ Once installed, FlashKDA is auto-dispatched from `flash-linear-attention`'s `chu
 
 See [BENCHMARK_H20.md](BENCHMARK_H20.md).
 
+To isolate the allocation and latency effects of caller-owned workspace reuse,
+run the workspace benchmark with a preallocated output in both modes:
+
+```bash
+python benchmarks/bench_workspace.py --json-out workspace_benchmark.json
+```
+
+The report includes host enqueue and batched end-to-end p50/p95 latency, CUDA
+stream elapsed time, profiler-visible empty operations, incremental peak memory,
+output equality, and CUDA Graph replay correctness across fixed, batched, and
+variable-length inputs.
+
 ## Tests
 
 ```bash
