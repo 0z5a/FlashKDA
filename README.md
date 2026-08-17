@@ -81,9 +81,29 @@ bash tests/test.sh
 ### `flash_kda.fwd`
 
 ```python
-flash_kda.fwd(q, k, v, g, beta, scale, out, A_log, dt_bias, lower_bound,
-              initial_state=None, final_state=None, cu_seqlens=None)
+out = flash_kda.fwd(
+    q, k, v, g, beta, scale,
+    A_log=A_log, dt_bias=dt_bias, lower_bound=lower_bound,
+    initial_state=None, final_state=None, cu_seqlens=None,
+)
 ```
+
+``fwd`` allocates ``out`` and its temporary workspace when they are omitted.
+Latency-sensitive callers can allocate the workspace once and reuse it for
+sequential calls:
+
+```python
+workspace = flash_kda.allocate_workspace(q, cu_seqlens)
+out = flash_kda.fwd(
+    q, k, v, g, beta, scale,
+    A_log=A_log, dt_bias=dt_bias, lower_bound=lower_bound,
+    cu_seqlens=cu_seqlens, workspace=workspace,
+)
+```
+
+A workspace sized for a larger input can serve a smaller input on the same
+device. Do not share one workspace between overlapping calls on different CUDA
+streams; allocate one workspace per concurrent call instead.
 
 **Parameters:**
 
@@ -95,13 +115,14 @@ flash_kda.fwd(q, k, v, g, beta, scale, out, A_log, dt_bias, lower_bound,
 | `g` | bf16 | `[B, T, H, K]` | Gate before activation |
 | `beta` | bf16 | `[B, T, H]` | Beta logits (pre-activation; sigmoid applied internally) |
 | `scale` | float | scalar | scaling factor |
-| `out` | bf16 | `[B, T, H, V]` | Output tensor |
+| `out` | bf16/None | `[B, T, H, V]` | Optional output tensor; allocated like `q` when omitted |
 | `A_log` | fp32 | `[H]` | Log-gate parameter |
 | `dt_bias` | fp32 | `[H, K]` | Gate bias |
 | `lower_bound` | float | scalar | Gate lower bound (range from -5.0 to 0) |
 | `initial_state` | bf16/fp32/None | `[B, H, V, K]` or `[N, H, V, K]` | (optional) Initial recurrent state |
 | `final_state` | bf16/fp32/None | `[B, H, V, K]` or `[N, H, V, K]` | (optional, output) Final recurrent state |
 | `cu_seqlens` | int64 | `[N+1]` | (optional) Cumulative sequence lengths for variable-length batching |
+| `workspace` | uint8/None | `[bytes]` | (optional) Reusable temporary storage from `allocate_workspace` |
 
 - Currently requires `K = V = 128`.
 - `initial_state` / `final_state` accept `None` (stateless), bf16, or fp32 tensors. When both are provided, their dtypes must match.
